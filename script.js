@@ -10,7 +10,8 @@
     const END_YEAR = 2024;
     const CENTER = [39.64, -0.34];
     const ZOOM = 13;
-    const IMAGE_BOUNDS = [[39.593, -0.408], [39.692, -0.275]];
+    // IMAGE_BOUNDS will be computed from boundary.geojson or bounds.json
+    let IMAGE_BOUNDS = null;
 
     // ── State ──────────────────────────────────────────────────
     const state = {
@@ -106,6 +107,23 @@
     }
 
     // ── Load data (CSV + GeoJSON) ──────────────────────────────
+    function boundsFromGeoJSON(geojson) {
+        let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+        function walk(coords) {
+            if (typeof coords[0] === 'number') {
+                // [lng, lat]
+                minLng = Math.min(minLng, coords[0]);
+                maxLng = Math.max(maxLng, coords[0]);
+                minLat = Math.min(minLat, coords[1]);
+                maxLat = Math.max(maxLat, coords[1]);
+            } else {
+                coords.forEach(walk);
+            }
+        }
+        geojson.features.forEach(f => walk(f.geometry.coordinates));
+        return [[minLat, minLng], [maxLat, maxLng]];
+    }
+
     async function loadData() {
         els.status.textContent = 'Loading statistics...';
         const [ndviText, ndwiText, boundaryText] = await Promise.all([
@@ -116,6 +134,19 @@
         state.stats.ndvi = parseCSV(ndviText);
         state.stats.ndwi = parseCSV(ndwiText);
         state.boundary = JSON.parse(boundaryText);
+
+        // Try loading explicit bounds, fall back to GeoJSON bbox
+        try {
+            const boundsResp = await fetch('data/bounds.json');
+            if (boundsResp.ok) {
+                const b = await boundsResp.json();
+                IMAGE_BOUNDS = [[b.south, b.west], [b.north, b.east]];
+            } else {
+                throw new Error('no bounds.json');
+            }
+        } catch {
+            IMAGE_BOUNDS = boundsFromGeoJSON(state.boundary);
+        }
     }
 
     // ── Map setup ──────────────────────────────────────────────
