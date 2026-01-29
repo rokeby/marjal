@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marjal dels Moros — 40 Years of Environmental Change</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>Loading Satellite Imagery</h2>
+            <p id="loading-status">Initializing...</p>
+            <div class="progress-bar"><div id="progress-fill"></div></div>
+            <p id="loading-count">0 / 82 images</p>
+        </div>
+    </div>
+
+    <header>
+        <div class="header-left">
+            <h1>Marjal dels Moros</h1>
+            <p class="subtitle">40 Years of Environmental Change (1984–2024)</p>
+        </div>
+        <div class="header-right">
+            <span class="badge">BC3 Climate Research</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Top controls bar -->
+        <div class="controls-bar">
+            <div class="index-toggle">
+                <button id="btn-ndvi" class="toggle-btn active" data-index="ndvi">
+                    <span class="dot ndvi-dot"></span> NDVI (Vegetation)
+                </button>
+                <button id="btn-ndwi" class="toggle-btn" data-index="ndwi">
+                    <span class="dot ndwi-dot"></span> NDWI (Water)
+                </button>
+            </div>
+
+            <div class="quick-jump">
+                <span class="label">Jump to:</span>
+                <button class="jump-btn" data-year="1984">1984</button>
+                <button class="jump-btn" data-year="1990">1990</button>
+                <button class="jump-btn" data-year="2000">2000</button>
+                <button class="jump-btn" data-year="2010">2010</button>
+                <button class="jump-btn" data-year="2020">2020</button>
+                <button class="jump-btn" data-year="2024">2024</button>
+            </div>
+
+            <div class="compare-toggle">
+                <button id="btn-compare" class="toggle-btn" title="Side-by-side comparison">
+                    ⬜⬜ Compare
+                </button>
+            </div>
+        </div>
+
+        <!-- Year display & slider -->
+        <div class="slider-section">
+            <div class="year-display">
+                <span id="current-year">1984</span>
+            </div>
+            <div class="slider-row">
+                <button id="btn-play" class="play-btn" title="Play/Pause">▶</button>
+                <input type="range" id="year-slider" min="1984" max="2024" value="1984" step="1" />
+                <div class="speed-control">
+                    <label for="speed-slider">Speed</label>
+                    <input type="range" id="speed-slider" min="100" max="2000" value="500" step="100" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content grid -->
+        <div class="content-grid" id="content-grid">
+            <!-- Map panel -->
+            <div class="panel map-panel" id="map-panel-1">
+                <div id="map" class="map-container"></div>
+                <div class="legend" id="legend"></div>
+            </div>
+
+            <!-- Compare map (hidden by default) -->
+            <div class="panel map-panel hidden" id="map-panel-2">
+                <div class="compare-controls">
+                    <span id="compare-year-label">2024</span>
+                    <input type="range" id="compare-slider" min="1984" max="2024" value="2024" step="1" />
+                </div>
+                <div id="map2" class="map-container"></div>
+            </div>
+
+            <!-- Charts & stats panel -->
+            <div class="panel chart-panel">
+                <div class="stats-cards" id="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-label">Mean</div>
+                        <div class="stat-value" id="stat-mean">—</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Median</div>
+                        <div class="stat-value" id="stat-median">—</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Min / Max</div>
+                        <div class="stat-value" id="stat-range">—</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Std Dev</div>
+                        <div class="stat-value" id="stat-std">—</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="timeseries-chart"></canvas>
+                </div>
+                <div class="extra-stats" id="extra-stats"></div>
+            </div>
+        </div>
+
+        <!-- Mini-map context -->
+        <div id="minimap-container" class="minimap">
+            <div id="minimap"></div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Marjal dels Moros Wetland · Valencia, Spain · Data: Landsat/Sentinel-2 · BC3 – Basque Centre for Climate Change</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
