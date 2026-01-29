@@ -125,7 +125,12 @@
         const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
         const tileAttr = '&copy; OpenStreetMap &copy; CARTO';
 
-        map = L.map('map', { zoomControl: true }).setView(CENTER, ZOOM);
+        map = L.map('map', {
+          zoomControl: true,
+          minZoom: 11,
+          maxZoom: 13
+        }).setView(CENTER, ZOOM);
+
         L.tileLayer(tileUrl, { attribution: tileAttr, maxZoom: 18 }).addTo(map);
 
         // Boundary
@@ -165,7 +170,11 @@
     function initCompareMap() {
         if (map2) return;
         const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-        map2 = L.map('map2', { zoomControl: false }).setView(CENTER, ZOOM);
+        map2 = L.map('map', {
+          zoomControl: true,
+          minZoom: 11,
+          maxZoom: 13
+        }).setView(CENTER, ZOOM);
         L.tileLayer(tileUrl, { maxZoom: 18 }).addTo(map2);
         boundaryLayer2 = L.geoJSON(state.boundary, {
             style: { color: '#fbbf24', weight: 2, fillOpacity: 0.05, dashArray: '6 4' }
