@@ -19,6 +19,17 @@
         </div>
     </div>
 
+    <!-- Layer Info Modal -->
+    <div id="layer-info-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title"></h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
     <header>
         <div class="header-left">
             <h1>Marjal dels Moros</h1>
@@ -34,11 +45,13 @@
         <div class="controls-bar">
             <div class="index-toggle">
                 <button id="btn-ndvi" class="toggle-btn active" data-index="ndvi">
-                    <span class="dot ndvi-dot"></span> NDVI (Vegetation)
+                    <span class="dot ndvi-dot"></span> NDVI
                 </button>
+                <span class="info-btn" data-layer="ndvi" title="Layer info" role="button" tabindex="0">i</span>
                 <button id="btn-ndwi" class="toggle-btn" data-index="ndwi">
-                    <span class="dot ndwi-dot"></span> NDWI (Water)
+                    <span class="dot ndwi-dot"></span> NDWI
                 </button>
+                <span class="info-btn" data-layer="ndwi" title="Layer info" role="button" tabindex="0">i</span>
             </div>
 
             <div class="quick-jump">
@@ -51,10 +64,11 @@
                 <button class="jump-btn" data-year="2024">2024</button>
             </div>
 
-            <div class="compare-toggle">
-                <button id="btn-compare" class="toggle-btn" title="Side-by-side comparison">
-                    ⬜⬜ Compare
-                </button>
+            <div class="toolbar-right">
+                <button id="btn-stats-toggle" class="toggle-btn" title="Toggle statistics panel">Stats</button>
+                <button id="btn-chart-toggle" class="toggle-btn" title="Toggle time series chart">Chart</button>
+                <button id="btn-export" class="toggle-btn" title="Export data">Export</button>
+                <button id="btn-compare" class="toggle-btn" title="Side-by-side comparison">Compare</button>
             </div>
         </div>
 
@@ -64,8 +78,14 @@
                 <span id="current-year">1984</span>
             </div>
             <div class="slider-row">
-                <button id="btn-play" class="play-btn" title="Play/Pause">▶</button>
-                <input type="range" id="year-slider" min="1984" max="2024" value="1984" step="1" />
+                <button id="btn-play" class="play-btn" title="Play/Pause">&#9654;</button>
+                <div class="slider-wrapper">
+                    <input type="range" id="year-slider" min="1984" max="2024" value="1984" step="1" />
+                    <!-- Event annotations rendered here -->
+                    <div class="timeline-events" id="timeline-events"></div>
+                    <!-- Quality indicators rendered here -->
+                    <div class="timeline-quality" id="timeline-quality"></div>
+                </div>
                 <div class="speed-control">
                     <label for="speed-slider">Speed</label>
                     <input type="range" id="speed-slider" min="100" max="2000" value="500" step="100" />
@@ -95,19 +115,19 @@
                 <div class="stats-cards" id="stats-cards">
                     <div class="stat-card">
                         <div class="stat-label">Mean</div>
-                        <div class="stat-value" id="stat-mean">—</div>
+                        <div class="stat-value" id="stat-mean">&mdash;</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Median</div>
-                        <div class="stat-value" id="stat-median">—</div>
+                        <div class="stat-value" id="stat-median">&mdash;</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Min / Max</div>
-                        <div class="stat-value" id="stat-range">—</div>
+                        <div class="stat-value" id="stat-range">&mdash;</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Std Dev</div>
-                        <div class="stat-value" id="stat-std">—</div>
+                        <div class="stat-value" id="stat-std">&mdash;</div>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -117,18 +137,53 @@
             </div>
         </div>
 
+        <!-- Statistics Panel (collapsible, overlays on left side) -->
+        <div id="stats-panel" class="stats-panel hidden">
+            <div class="stats-panel-header">
+                <h3>Current View Statistics</h3>
+                <button id="stats-panel-close" class="modal-close">&times;</button>
+            </div>
+            <div id="stats-panel-body" class="stats-panel-body"></div>
+        </div>
+
+        <!-- Multi-variable chart panel (bottom expandable) -->
+        <div id="mv-chart-panel" class="mv-chart-panel hidden">
+            <div class="mv-chart-header">
+                <h3>Time Series Analysis</h3>
+                <div class="mv-chart-controls" id="mv-chart-controls"></div>
+                <div class="mv-chart-actions">
+                    <button id="mv-export-csv" class="small-btn">Export CSV</button>
+                    <button id="mv-export-png" class="small-btn">Export PNG</button>
+                    <button id="mv-chart-close" class="modal-close">&times;</button>
+                </div>
+            </div>
+            <div class="mv-chart-container">
+                <canvas id="mv-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Export dropdown -->
+        <div id="export-menu" class="export-menu hidden">
+            <button class="export-item" id="export-png">Export View as PNG</button>
+            <button class="export-item" id="export-csv">Export Stats as CSV</button>
+        </div>
+
         <!-- Mini-map context -->
         <div id="minimap-container" class="minimap">
             <div id="minimap"></div>
         </div>
+
+        <!-- Timeline tooltip -->
+        <div id="timeline-tooltip" class="timeline-tooltip hidden"></div>
     </main>
 
     <footer>
-        <p>Marjal dels Moros Wetland · Valencia, Spain · Data: Landsat/Sentinel-2 · BC3 – Basque Centre for Climate Change</p>
+        <p>Marjal dels Moros Wetland &middot; Valencia, Spain &middot; Data: Landsat/Sentinel-2 &middot; BC3 – Basque Centre for Climate Change</p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
