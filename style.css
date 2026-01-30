@@ -82,7 +82,6 @@ header h1 { font-size: 1.25rem; font-weight: 700; }
     border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
 }
-.index-toggle { display: flex; gap: 0.4rem; }
 .toggle-btn {
     padding: 0.35rem 0.8rem; font-size: 0.8rem;
     background: var(--surface2); color: var(--text-dim);
@@ -92,10 +91,7 @@ header h1 { font-size: 1.25rem; font-weight: 700; }
 }
 .toggle-btn:hover { border-color: var(--accent); color: var(--text); }
 .toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.ndvi-dot { background: var(--green); }
-.ndwi-dot { background: var(--blue); }
-.quick-jump { display: flex; align-items: center; gap: 0.3rem; margin-left: auto; }
+.quick-jump { display: flex; align-items: center; gap: 0.3rem; }
 .quick-jump .label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.2rem; }
 .jump-btn {
     padding: 0.25rem 0.55rem; font-size: 0.75rem;
@@ -104,7 +100,8 @@ header h1 { font-size: 1.25rem; font-weight: 700; }
     cursor: pointer; transition: all 0.15s;
 }
 .jump-btn:hover { border-color: var(--accent); color: var(--text); }
-.compare-toggle { margin-left: 0.5rem; }
+.jump-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.mode-toggles { display: flex; gap: 0.4rem; margin-left: auto; }
 
 /* ===== Slider Section ===== */
 .slider-section {
@@ -164,12 +161,12 @@ input[type="range"]::-moz-range-thumb {
 main { flex: 1; display: flex; flex-direction: column; }
 .content-grid {
     flex: 1; display: grid;
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 220px 1fr 380px;
     gap: 0;
     min-height: 0;
 }
 .content-grid.compare-mode {
-    grid-template-columns: 1fr 1fr 400px;
+    grid-template-columns: 220px 1fr 1fr 380px;
 }
 .panel { position: relative; }
 .map-panel { min-height: 450px; }
@@ -187,6 +184,120 @@ main { flex: 1; display: flex; flex-direction: column; }
 }
 #compare-year-label { font-weight: 700; font-size: 1.1rem; min-width: 3ch; }
 #compare-slider { width: 120px; }
+
+/* ===== Layer Panel (left sidebar) ===== */
+.layer-panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 0.75rem;
+    display: flex; flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+.layer-panel-header h3 {
+    font-size: 0.85rem; font-weight: 700;
+}
+.layer-panel-header h3 span {
+    color: var(--text-dim); font-weight: 400;
+}
+.active-layers { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* Individual layer card in the stack */
+.layer-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+}
+.layer-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.35rem;
+}
+.layer-card-name {
+    font-weight: 600; font-size: 0.8rem;
+    cursor: pointer;
+}
+.layer-card-name:hover { color: var(--accent); }
+.layer-card-actions {
+    display: flex; align-items: center; gap: 0.3rem;
+}
+.layer-card-actions button {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.25rem;
+    border-radius: 4px;
+}
+.layer-card-actions button:hover { color: var(--text); background: var(--border); }
+.layer-card-actions button.visibility-off { color: var(--red); }
+
+.layer-card-controls {
+    display: flex; flex-direction: column; gap: 0.3rem;
+}
+.layer-card-controls label {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.7rem; color: var(--text-dim);
+}
+.layer-card-controls input[type="range"] {
+    flex: 1; height: 4px;
+}
+.layer-card-controls select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; font-size: 0.7rem; padding: 0.15rem 0.3rem;
+    flex: 1;
+}
+.opacity-value {
+    min-width: 2.5ch; text-align: right; font-variant-numeric: tabular-nums;
+}
+.layer-card .no-data-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    color: var(--yellow);
+    margin-left: 0.3rem;
+}
+
+/* Add layer dropdown */
+.add-layer-section select {
+    width: 100%;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.4rem 0.5rem; font-size: 0.8rem;
+    cursor: pointer;
+}
+.add-layer-section select:hover { border-color: var(--accent); }
+
+/* Layer panel divider */
+.layer-panel-divider {
+    height: 1px; background: var(--border); margin: 0.25rem 0;
+}
+
+/* Static layers */
+.static-layers-section h4 {
+    font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.3rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+.static-toggle {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.78rem; cursor: pointer;
+    padding: 0.2rem 0;
+}
+.static-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+
+/* Layer info card */
+.layer-info {
+    font-size: 0.75rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem;
+    display: none;
+}
+.layer-info.visible { display: block; }
+.layer-info h4 { font-size: 0.8rem; margin-bottom: 0.3rem; color: var(--accent); }
+.layer-info .info-row { color: var(--text-dim); margin-bottom: 0.15rem; }
+.layer-info .info-row strong { color: var(--text); }
+.layer-info .info-desc { margin-top: 0.3rem; line-height: 1.4; }
 
 /* ===== Chart Panel ===== */
 .chart-panel {
@@ -217,6 +328,38 @@ main { flex: 1; display: flex; flex-direction: column; }
     border-top: 1px solid var(--border);
 }
 
+/* Chart toggles */
+.chart-toggles {
+    display: flex; flex-wrap: wrap; gap: 0.35rem;
+}
+.chart-toggle-btn {
+    padding: 0.2rem 0.55rem; font-size: 0.7rem;
+    background: var(--surface2); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.25rem;
+}
+.chart-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+.chart-toggle-btn.active { border-color: currentColor; color: var(--text); }
+.chart-toggle-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+
+/* Export buttons */
+.export-buttons {
+    display: flex; gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+.export-btn {
+    flex: 1; padding: 0.4rem;
+    background: var(--surface2); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    cursor: pointer; font-size: 0.75rem;
+    transition: all 0.15s;
+}
+.export-btn:hover { border-color: var(--accent); color: var(--text); }
+
 /* ===== Legend ===== */
 .legend {
     position: absolute; bottom: 24px; right: 12px;
@@ -228,6 +371,7 @@ main { flex: 1; display: flex; flex-direction: column; }
     box-shadow: var(--shadow);
     font-size: 0.75rem;
     min-width: 140px;
+    max-width: 200px;
 }
 .legend-title { font-weight: 700; margin-bottom: 0.35rem; }
 .legend-bar {
@@ -235,6 +379,8 @@ main { flex: 1; display: flex; flex-direction: column; }
     margin-bottom: 0.25rem;
 }
 .legend-labels { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-dim); }
+.legend-item { margin-bottom: 0.5rem; }
+.legend-item:last-child { margin-bottom: 0; }
 
 /* ===== Minimap ===== */
 .minimap {
@@ -258,11 +404,15 @@ footer {
 }
 
 /* ===== Responsive ===== */
+@media (max-width: 1100px) {
+    .content-grid { grid-template-columns: 180px 1fr 320px; }
+    .content-grid.compare-mode { grid-template-columns: 180px 1fr 1fr 320px; }
+}
 @media (max-width: 900px) {
     .content-grid { grid-template-columns: 1fr; }
     .content-grid.compare-mode { grid-template-columns: 1fr; }
+    .layer-panel { border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; max-height: 200px; }
     .chart-panel { border-left: none; border-top: 1px solid var(--border); max-height: 400px; }
     .minimap { display: none; }
     .controls-bar { gap: 0.5rem; }
-    .quick-jump { margin-left: 0; }
 }

@@ -15,7 +15,7 @@
             <h2>Loading Satellite Imagery</h2>
             <p id="loading-status">Initializing...</p>
             <div class="progress-bar"><div id="progress-fill"></div></div>
-            <p id="loading-count">0 / 82 images</p>
+            <p id="loading-count">0 / 0 images</p>
         </div>
     </div>
 
@@ -32,15 +32,6 @@
     <main>
         <!-- Top controls bar -->
         <div class="controls-bar">
-            <div class="index-toggle">
-                <button id="btn-ndvi" class="toggle-btn active" data-index="ndvi">
-                    <span class="dot ndvi-dot"></span> NDVI (Vegetation)
-                </button>
-                <button id="btn-ndwi" class="toggle-btn" data-index="ndwi">
-                    <span class="dot ndwi-dot"></span> NDWI (Water)
-                </button>
-            </div>
-
             <div class="quick-jump">
                 <span class="label">Jump to:</span>
                 <button class="jump-btn" data-year="1984">1984</button>
@@ -50,11 +41,9 @@
                 <button class="jump-btn" data-year="2020">2020</button>
                 <button class="jump-btn" data-year="2024">2024</button>
             </div>
-
-            <div class="compare-toggle">
-                <button id="btn-compare" class="toggle-btn" title="Side-by-side comparison">
-                    ⬜⬜ Compare
-                </button>
+            <div class="mode-toggles">
+                <button id="btn-compare" class="toggle-btn" title="Side-by-side comparison">Compare</button>
+                <button id="btn-inspector" class="toggle-btn" title="Click map for pixel values">Inspector</button>
             </div>
         </div>
 
@@ -64,7 +53,7 @@
                 <span id="current-year">1984</span>
             </div>
             <div class="slider-row">
-                <button id="btn-play" class="play-btn" title="Play/Pause">▶</button>
+                <button id="btn-play" class="play-btn" title="Play/Pause">&#9654;</button>
                 <input type="range" id="year-slider" min="1984" max="2024" value="1984" step="1" />
                 <div class="speed-control">
                     <label for="speed-slider">Speed</label>
@@ -75,6 +64,39 @@
 
         <!-- Main content grid -->
         <div class="content-grid" id="content-grid">
+            <!-- Layer panel (left sidebar) -->
+            <div class="layer-panel" id="layer-panel">
+                <div class="layer-panel-header">
+                    <h3>Active Layers <span id="layer-count">(0/3)</span></h3>
+                </div>
+                <div id="active-layers" class="active-layers"></div>
+                <div class="add-layer-section">
+                    <select id="add-layer-select">
+                        <option value="">+ Add Layer...</option>
+                    </select>
+                </div>
+
+                <div class="layer-panel-divider"></div>
+
+                <!-- Static layers toggles -->
+                <div class="static-layers-section">
+                    <h4>Static Layers</h4>
+                    <label class="static-toggle">
+                        <input type="checkbox" id="chk-water-occurrence" />
+                        <span>Water Occurrence</span>
+                    </label>
+                    <label class="static-toggle">
+                        <input type="checkbox" id="chk-water-seasonality" />
+                        <span>Water Seasonality</span>
+                    </label>
+                </div>
+
+                <div class="layer-panel-divider"></div>
+
+                <!-- Layer info card -->
+                <div id="layer-info" class="layer-info"></div>
+            </div>
+
             <!-- Map panel -->
             <div class="panel map-panel" id="map-panel-1">
                 <div id="map" class="map-container"></div>
@@ -95,25 +117,30 @@
                 <div class="stats-cards" id="stats-cards">
                     <div class="stat-card">
                         <div class="stat-label">Mean</div>
-                        <div class="stat-value" id="stat-mean">—</div>
+                        <div class="stat-value" id="stat-mean">&mdash;</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Median</div>
-                        <div class="stat-value" id="stat-median">—</div>
+                        <div class="stat-value" id="stat-median">&mdash;</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Min / Max</div>
-                        <div class="stat-value" id="stat-range">—</div>
+                        <div class="stat-value" id="stat-range">&mdash;</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Std Dev</div>
-                        <div class="stat-value" id="stat-std">—</div>
+                        <div class="stat-value" id="stat-std">&mdash;</div>
                     </div>
                 </div>
+                <div class="chart-toggles" id="chart-toggles"></div>
                 <div class="chart-container">
                     <canvas id="timeseries-chart"></canvas>
                 </div>
                 <div class="extra-stats" id="extra-stats"></div>
+                <div class="export-buttons">
+                    <button id="btn-export-png" class="export-btn">Export PNG</button>
+                    <button id="btn-export-csv" class="export-btn">Export CSV</button>
+                </div>
             </div>
         </div>
 
@@ -124,7 +151,7 @@
     </main>
 
     <footer>
-        <p>Marjal dels Moros Wetland · Valencia, Spain · Data: Landsat/Sentinel-2 · BC3 – Basque Centre for Climate Change</p>
+        <p>Marjal dels Moros Wetland &middot; Valencia, Spain &middot; Data: Landsat/Sentinel-2 &middot; BC3 &ndash; Basque Centre for Climate Change</p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
