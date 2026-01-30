@@ -1,0 +1,204 @@
+{
+  "layers": [
+    {
+      "id": "ndvi",
+      "name": "NDVI",
+      "full_name": "Normalized Difference Vegetation Index",
+      "description": "Measures vegetation health and density using the difference between near-infrared and red reflectance. Higher values indicate denser, healthier vegetation. Widely used for monitoring agricultural productivity, drought impacts, and ecosystem change.",
+      "range": "-1.0 to 1.0",
+      "typical_range": "0.2 to 0.8 (vegetated areas)",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "(NIR - Red) / (NIR + Red)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Vegetation health monitoring",
+        "Drought impact assessment",
+        "Agricultural productivity tracking",
+        "Land cover change detection",
+        "Ecosystem degradation analysis"
+      ]
+    },
+    {
+      "id": "ndwi",
+      "name": "NDWI",
+      "full_name": "Normalized Difference Water Index",
+      "description": "Detects surface water bodies and measures water content in vegetation using the difference between green and near-infrared bands. Positive values indicate open water surfaces. Essential for wetland monitoring and flood mapping.",
+      "range": "-1.0 to 1.0",
+      "typical_range": "0.0 to 0.5 (water bodies)",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "(Green - NIR) / (Green + NIR)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Surface water detection",
+        "Wetland extent monitoring",
+        "Flood mapping",
+        "Water body change analysis",
+        "Irrigation monitoring"
+      ]
+    },
+    {
+      "id": "evi",
+      "name": "EVI",
+      "full_name": "Enhanced Vegetation Index",
+      "description": "Improved vegetation index that corrects for atmospheric and soil background effects. More sensitive than NDVI in areas of dense vegetation (high biomass). Reduces saturation effects in tropical and agricultural regions.",
+      "range": "0.0 to 0.8",
+      "typical_range": "0.2 to 0.6 (vegetated areas)",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Dense vegetation monitoring",
+        "Canopy structure analysis",
+        "Agricultural yield estimation",
+        "Phenology studies",
+        "Biomass estimation"
+      ]
+    },
+    {
+      "id": "mndwi",
+      "name": "MNDWI",
+      "full_name": "Modified Normalized Difference Water Index",
+      "description": "Enhanced water detection index using shortwave infrared instead of NIR. Better at distinguishing water from built-up areas and reduces noise from vegetation and soil. Preferred for urban wetland monitoring.",
+      "range": "-1.0 to 1.0",
+      "typical_range": "0.1 to 0.8 (water bodies)",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "(Green - SWIR) / (Green + SWIR)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Urban water body mapping",
+        "Wetland boundary delineation",
+        "Water quality assessment",
+        "Coastal water monitoring",
+        "Built-up area discrimination"
+      ]
+    },
+    {
+      "id": "ndmi",
+      "name": "NDMI",
+      "full_name": "Normalized Difference Moisture Index",
+      "description": "Measures vegetation water content using NIR and SWIR bands. Sensitive to changes in leaf water content and soil moisture. Useful for detecting water stress in vegetation before visible symptoms appear.",
+      "range": "-1.0 to 1.0",
+      "typical_range": "0.0 to 0.6 (healthy vegetation)",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "(NIR - SWIR) / (NIR + SWIR)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Vegetation moisture stress detection",
+        "Fire risk assessment",
+        "Irrigation monitoring",
+        "Drought early warning",
+        "Wetland health assessment"
+      ]
+    },
+    {
+      "id": "lst",
+      "name": "LST",
+      "full_name": "Land Surface Temperature",
+      "description": "Surface temperature derived from thermal infrared bands. Indicates heat stress, urban heat island effects, and thermal characteristics of land cover types. Corrected for emissivity variations across different surfaces.",
+      "range": "10\u00b0C to 45\u00b0C",
+      "typical_range": "18\u00b0C to 35\u00b0C (Mediterranean climate)",
+      "resolution": "30m (resampled from 100/120m thermal)",
+      "source": "Landsat 5 TM Band 6 / Landsat 8 TIRS",
+      "bands": "Thermal Infrared (10.6-12.5 \u03bcm)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Heat stress monitoring",
+        "Urban heat island detection",
+        "Evapotranspiration estimation",
+        "Surface energy balance",
+        "Ecosystem thermal regime analysis"
+      ]
+    },
+    {
+      "id": "truecolor",
+      "name": "TrueColor",
+      "full_name": "True Color Composite",
+      "description": "Natural color representation using Red, Green, and Blue bands. Shows the landscape as the human eye would see it. Useful for visual interpretation, land use mapping, and communicating changes to non-specialist audiences.",
+      "range": "0-255 (RGB)",
+      "typical_range": "Visual composite",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "Red, Green, Blue (Bands 3,2,1 / 4,3,2)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Visual interpretation",
+        "Land use mapping",
+        "Urban expansion monitoring",
+        "Stakeholder communication",
+        "Baseline documentation"
+      ]
+    },
+    {
+      "id": "falsecolor",
+      "name": "FalseColor",
+      "full_name": "False Color Composite (NIR)",
+      "description": "Near-infrared composite highlighting vegetation in red tones. Living vegetation appears bright red, water appears dark/black, and bare soil appears tan/brown. Standard composite for vegetation and water analysis.",
+      "range": "0-255 (RGB mapped from NIR, Red, Green)",
+      "typical_range": "Visual composite",
+      "resolution": "30m",
+      "source": "Landsat 5 TM / Landsat 8 OLI",
+      "bands": "NIR, Red, Green (Bands 4,3,2 / 5,4,3)",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Vegetation mapping",
+        "Wetland identification",
+        "Burn scar detection",
+        "Crop health assessment",
+        "Water body delineation"
+      ]
+    },
+    {
+      "id": "et",
+      "name": "ET",
+      "full_name": "Evapotranspiration",
+      "description": "Actual evapotranspiration estimated from satellite thermal data and meteorological inputs. Represents water loss from soil evaporation and plant transpiration combined. Critical for water balance and irrigation management.",
+      "range": "0 to 10 mm/day",
+      "typical_range": "2 to 6 mm/day (growing season)",
+      "resolution": "30m",
+      "source": "Landsat thermal + METRIC/SEBAL model",
+      "bands": "Derived from thermal, NDVI, and meteorological data",
+      "years": "2001-2023",
+      "year_count": 23,
+      "use_cases": [
+        "Water balance calculation",
+        "Irrigation demand estimation",
+        "Drought monitoring",
+        "Wetland water budget",
+        "Ecosystem water use efficiency"
+      ]
+    },
+    {
+      "id": "precipitation",
+      "name": "Precipitation",
+      "full_name": "Annual Precipitation",
+      "description": "Annual accumulated precipitation from satellite and gauge-blended datasets. Provides spatial distribution of rainfall across the study area. Essential context for interpreting vegetation and water indices.",
+      "range": "200 to 800 mm/year",
+      "typical_range": "350 to 550 mm/year (semi-arid Mediterranean)",
+      "resolution": "~5km (downscaled)",
+      "source": "CHIRPS / ERA5-Land",
+      "bands": "Precipitation gauge + satellite estimates",
+      "years": "1984-2024",
+      "year_count": 41,
+      "use_cases": [
+        "Drought identification",
+        "Rainfall trend analysis",
+        "Water input estimation",
+        "Climate change assessment",
+        "Correlation with vegetation response"
+      ]
+    }
+  ]
+}
