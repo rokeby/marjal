@@ -506,14 +506,176 @@ footer {
     font-size: 0.7rem; color: var(--text-dim);
 }
 
-/* ===== Responsive ===== */
+/* ===== Responsive: Tablet (<=900px) ===== */
 @media (max-width: 900px) {
     .content-grid { grid-template-columns: 1fr; }
     .content-grid.compare-mode { grid-template-columns: 1fr; }
-    .chart-panel { border-left: none; border-top: 1px solid var(--border); max-height: 400px; }
+    .chart-panel {
+        border-left: none; border-top: 1px solid var(--border);
+        max-height: 380px;
+    }
     .minimap { display: none; }
-    .controls-bar { gap: 0.5rem; }
+    .controls-bar { gap: 0.5rem; padding: 0.5rem 1rem; }
     .quick-jump { margin-left: 0; }
     .stats-panel { width: 100%; }
     .mv-chart-panel { height: 280px; }
+    .map-panel { min-height: 350px; }
+    .map-container { min-height: 350px; }
+    .legend { bottom: 16px; right: 8px; font-size: 0.7rem; min-width: 120px; padding: 0.4rem 0.6rem; }
+}
+
+/* ===== Responsive: Mobile (<=600px) ===== */
+@media (max-width: 600px) {
+    html { font-size: 14px; }
+
+    /* Header: stack vertically, compact */
+    header {
+        flex-direction: column; align-items: flex-start;
+        padding: 0.5rem 0.75rem; gap: 0.2rem;
+    }
+    header h1 { font-size: 1.1rem; }
+    .subtitle { font-size: 0.7rem; }
+    .header-right { align-self: flex-end; margin-top: -1.4rem; }
+    .badge { font-size: 0.6rem; padding: 0.2rem 0.45rem; }
+
+    /* Controls bar: wrap into rows */
+    .controls-bar {
+        padding: 0.4rem 0.75rem;
+        gap: 0.4rem;
+        justify-content: center;
+    }
+    .index-toggle { gap: 0.3rem; }
+    .toggle-btn {
+        padding: 0.3rem 0.6rem; font-size: 0.75rem;
+        /* Larger touch target */
+        min-height: 36px;
+    }
+
+    /* Quick jump: hide label, smaller buttons */
+    .quick-jump { gap: 0.2rem; flex-wrap: wrap; justify-content: center; }
+    .quick-jump .label { display: none; }
+    .jump-btn {
+        padding: 0.2rem 0.4rem; font-size: 0.7rem;
+        min-height: 30px; min-width: 36px;
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Toolbar right: compact */
+    .toolbar-right { gap: 0.3rem; flex-wrap: wrap; }
+
+    /* Year display: smaller */
+    .slider-section { padding: 0.35rem 0.75rem; }
+    #current-year { font-size: 1.8rem; }
+
+    /* Slider: larger touch targets */
+    .slider-row { gap: 0.5rem; }
+    .play-btn { width: 40px; height: 40px; font-size: 1rem; }
+    input[type="range"] { height: 8px; }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; }
+
+    /* Speed control: hide label, shrink */
+    .speed-control label { display: none; }
+    #speed-slider { width: 60px; }
+
+    /* Quality dots: bigger for touch */
+    .quality-dot { width: 6px; height: 6px; }
+    .timeline-quality { padding: 3px 9px 0; }
+
+    /* Timeline events: hide labels to avoid crowding */
+    .timeline-events { top: -14px; height: 12px; }
+    .event-marker { height: 12px; width: 3px; }
+
+    /* Map: shorter to allow seeing controls */
+    .map-panel { min-height: 280px; }
+    .map-container { min-height: 280px; }
+
+    /* Chart panel: scrollable, constrained */
+    .chart-panel {
+        max-height: 320px;
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+    .stats-cards { gap: 0.35rem; }
+    .stat-card { padding: 0.4rem 0.5rem; }
+    .stat-label { font-size: 0.65rem; }
+    .stat-value { font-size: 0.95rem; }
+    .chart-container { min-height: 180px; }
+
+    /* Legend: repositioned, compact */
+    .legend {
+        bottom: 12px; right: 6px;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.65rem;
+        min-width: 100px;
+    }
+    .legend-bar { height: 10px; }
+    .legend-labels { font-size: 0.55rem; }
+
+    /* Stats panel: full screen overlay on mobile */
+    .stats-panel {
+        width: 100%; height: 100%;
+        border-right: none;
+    }
+
+    /* MV chart panel: taller relative to screen, full width */
+    .mv-chart-panel {
+        height: 55vh; max-height: 320px;
+    }
+    .mv-chart-header {
+        padding: 0.4rem 0.75rem; gap: 0.5rem;
+    }
+    .mv-chart-header h3 { font-size: 0.8rem; }
+    .mv-chart-controls { gap: 0.35rem; }
+    .mv-chart-controls label { font-size: 0.7rem; }
+    .small-btn { padding: 0.2rem 0.4rem; font-size: 0.65rem; }
+
+    /* Export menu: centered on mobile */
+    .export-menu {
+        top: auto; bottom: 60px; right: 8px; left: 8px;
+        width: auto;
+    }
+    .export-item { padding: 0.6rem 1rem; font-size: 0.85rem; min-height: 44px; }
+
+    /* Modal: full-width on mobile */
+    .modal-card { width: 95%; max-width: none; border-radius: 8px; }
+    .modal-header { padding: 0.75rem 1rem; }
+    .modal-header h3 { font-size: 0.9rem; }
+    .modal-body { padding: 1rem; }
+    .modal-body .info-row { font-size: 0.8rem; }
+    .modal-body .description-text { font-size: 0.8rem; }
+
+    /* Compare controls */
+    .compare-controls { padding: 0.3rem 0.6rem; }
+    #compare-year-label { font-size: 0.95rem; }
+    #compare-slider { width: 100px; }
+
+    /* Footer: wrap text */
+    footer {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.6rem;
+        line-height: 1.4;
+    }
+
+    /* Timeline tooltip: constrain to screen */
+    .timeline-tooltip { max-width: calc(100vw - 24px); font-size: 0.75rem; }
+
+    /* Click popup */
+    .click-popup { min-width: 160px; font-size: 0.75rem; }
+}
+
+/* ===== Responsive: Small phones (<=380px) ===== */
+@media (max-width: 380px) {
+    header h1 { font-size: 0.95rem; }
+    #current-year { font-size: 1.5rem; }
+    .toggle-btn { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
+    .map-panel { min-height: 240px; }
+    .map-container { min-height: 240px; }
+    .chart-panel { max-height: 280px; }
+    .chart-container { min-height: 150px; }
+    .mv-chart-panel { height: 50vh; max-height: 280px; }
+
+    /* Hide some quick-jump buttons to save space */
+    .jump-btn[data-year="1990"],
+    .jump-btn[data-year="2010"] { display: none; }
 }

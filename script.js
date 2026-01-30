@@ -933,12 +933,10 @@
             if (state.playing) { pause(); play(); }
         });
 
-        els.btnNdvi.addEventListener('click', (e) => {
-            if (e.target.classList.contains('info-btn')) return;
+        els.btnNdvi.addEventListener('click', () => {
             state.index = 'ndvi'; setActiveToggle(); update();
         });
-        els.btnNdwi.addEventListener('click', (e) => {
-            if (e.target.classList.contains('info-btn')) return;
+        els.btnNdwi.addEventListener('click', () => {
             state.index = 'ndwi'; setActiveToggle(); update();
         });
 
