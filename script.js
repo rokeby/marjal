@@ -1,29 +1,73 @@
 /* ============================================================
-   Marjal dels Moros – Satellite Time Series Visualisation
+   Marjal dels Moros – Satellite Seasonal Time Series
+   ============================================================
+   Temporal resolution: three snapshots per year capturing the
+   seasonal peaks and troughs of vegetation and water extent
+   for this Mediterranean wetland (Valencia, Spain).
+
+     02 – February : peak water / winter flooding
+     05 – May      : peak vegetation (spring green-up)
+     08 – August   : summer drought minimum (both indices low)
    ============================================================ */
 
 (function () {
     'use strict';
 
     // ── Configuration ──────────────────────────────────────────
-    const START_YEAR = 1984;
-    const END_YEAR = 2024;
-    const CENTER = [39.64, -0.34];
-    const ZOOM = 13;
-    // IMAGE_BOUNDS will be computed from boundary.geojson or bounds.json
-    let IMAGE_BOUNDS = null;
+    const START_YEAR     = 1984;
+    const END_YEAR       = 2024;
+    const SEASONAL_MONTHS = [2, 5, 8];   // Feb, May, Aug
+    const MONTH_LABELS   = { 2: 'Feb', 5: 'May', 8: 'Aug' };
+    const MONTH_DESC     = {
+        2: 'Peak water / winter flooding',
+        5: 'Peak vegetation (spring)',
+        8: 'Summer drought minimum',
+    };
+    const CENTER         = [39.64, -0.34];
+    const ZOOM           = 13;
+    let   IMAGE_BOUNDS   = null;
+
+    // ── Build ordered frame list ───────────────────────────────
+    // frames() returns [{year, month}, ...] sorted chronologically.
+    function frames() {
+        const list = [];
+        for (let y = START_YEAR; y <= END_YEAR; y++) {
+            for (const m of SEASONAL_MONTHS) {
+                list.push({ year: y, month: m });
+            }
+        }
+        return list;
+    }
+    const FRAMES = frames();
+    const TOTAL_FRAMES = FRAMES.length;
+
+    function frameKey(year, month) {
+        return `${year}_${String(month).padStart(2, '0')}`;
+    }
+
+    function imgPath(idx, year, month) {
+        return `data/images/${idx}/${frameKey(year, month)}.png`;
+    }
+
+    function frameLabel(year, month) {
+        return `${MONTH_LABELS[month]} ${year}`;
+    }
 
     // ── State ──────────────────────────────────────────────────
     const state = {
-        year: START_YEAR,
-        index: 'ndvi',            // 'ndvi' | 'ndwi'
+        frameIndex: 0,           // index into FRAMES
+        get year()  { return FRAMES[this.frameIndex].year;  },
+        get month() { return FRAMES[this.frameIndex].month; },
+        index: 'ndvi',           // 'ndvi' | 'ndwi'
         playing: false,
-        speed: 500,               // ms per frame
+        speed: 500,
         compareMode: false,
-        compareYear: END_YEAR,
-        images: { ndvi: {}, ndwi: {} },     // year → Image
-        overlays: { ndvi: {}, ndwi: {} },   // year → L.ImageOverlay
-        overlays2: { ndvi: {}, ndwi: {} },  // compare map
+        compareFrameIndex: TOTAL_FRAMES - 1,
+        get compareYear()  { return FRAMES[this.compareFrameIndex].year;  },
+        get compareMonth() { return FRAMES[this.compareFrameIndex].month; },
+        images: { ndvi: {}, ndwi: {} },
+        overlays:  { ndvi: {}, ndwi: {} },
+        overlays2: { ndvi: {}, ndwi: {} },
         stats: { ndvi: [], ndwi: [] },
         boundary: null,
         chart: null,
@@ -36,43 +80,33 @@
     const els = {};
 
     function cacheDom() {
-        els.overlay = $('#loading-overlay');
-        els.status = $('#loading-status');
-        els.progress = $('#progress-fill');
-        els.loadCount = $('#loading-count');
-        els.yearLabel = $('#current-year');
-        els.slider = $('#year-slider');
-        els.playBtn = $('#btn-play');
-        els.speedSlider = $('#speed-slider');
-        els.btnNdvi = $('#btn-ndvi');
-        els.btnNdwi = $('#btn-ndwi');
-        els.btnCompare = $('#btn-compare');
-        els.comparePanel = $('#map-panel-2');
-        els.compareSlider = $('#compare-slider');
+        els.overlay          = $('#loading-overlay');
+        els.status           = $('#loading-status');
+        els.progress         = $('#progress-fill');
+        els.loadCount        = $('#loading-count');
+        els.frameLabel       = $('#current-year');
+        els.monthDesc        = $('#month-desc');
+        els.slider           = $('#year-slider');
+        els.playBtn          = $('#btn-play');
+        els.speedSlider      = $('#speed-slider');
+        els.btnNdvi          = $('#btn-ndvi');
+        els.btnNdwi          = $('#btn-ndwi');
+        els.btnCompare       = $('#btn-compare');
+        els.comparePanel     = $('#map-panel-2');
+        els.compareSlider    = $('#compare-slider');
         els.compareYearLabel = $('#compare-year-label');
-        els.contentGrid = $('#content-grid');
-        els.legend = $('#legend');
-        els.extraStats = $('#extra-stats');
+        els.contentGrid      = $('#content-grid');
+        els.legend           = $('#legend');
+        els.extraStats       = $('#extra-stats');
     }
 
-    // ── Helpers ────────────────────────────────────────────────
-    function years() {
-        const a = [];
-        for (let y = START_YEAR; y <= END_YEAR; y++) a.push(y);
-        return a;
-    }
-
-    function imgPath(idx, year) {
-        return `data/images/${idx}/${year}.png`;
-    }
-
-    // ── CSV parser (simple) ────────────────────────────────────
+    // ── CSV parser ─────────────────────────────────────────────
     function parseCSV(text) {
         const lines = text.trim().split('\n');
-        const hdr = lines[0].split(',');
+        const hdr   = lines[0].split(',');
         return lines.slice(1).map(l => {
             const vals = l.split(',');
-            const obj = {};
+            const obj  = {};
             hdr.forEach((h, i) => {
                 const v = vals[i];
                 obj[h.trim()] = isNaN(v) ? v : +v;
@@ -81,37 +115,34 @@
         });
     }
 
-    // ── Preload all images ─────────────────────────────────────
+    // ── Preload all seasonal images ────────────────────────────
     function preloadImages() {
         return new Promise((resolve) => {
-            const total = years().length * 2;
-            let loaded = 0;
-
+            const total = TOTAL_FRAMES * 2;
+            let loaded  = 0;
             function tick() {
                 loaded++;
                 els.progress.style.width = `${(loaded / total) * 100}%`;
                 els.loadCount.textContent = `${loaded} / ${total} images`;
                 if (loaded === total) resolve();
             }
-
-            years().forEach(y => {
+            FRAMES.forEach(({ year, month }) => {
                 ['ndvi', 'ndwi'].forEach(idx => {
                     const img = new Image();
-                    img.onload = tick;
+                    img.onload  = tick;
                     img.onerror = tick;
-                    img.src = imgPath(idx, y);
-                    state.images[idx][y] = img;
+                    img.src     = imgPath(idx, year, month);
+                    state.images[idx][frameKey(year, month)] = img;
                 });
             });
         });
     }
 
-    // ── Load data (CSV + GeoJSON) ──────────────────────────────
+    // ── Load CSV + GeoJSON ─────────────────────────────────────
     function boundsFromGeoJSON(geojson) {
         let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
         function walk(coords) {
             if (typeof coords[0] === 'number') {
-                // [lng, lat]
                 minLng = Math.min(minLng, coords[0]);
                 maxLng = Math.max(maxLng, coords[0]);
                 minLat = Math.min(minLat, coords[1]);
@@ -133,13 +164,12 @@
         ]);
         state.stats.ndvi = parseCSV(ndviText);
         state.stats.ndwi = parseCSV(ndwiText);
-        state.boundary = JSON.parse(boundaryText);
+        state.boundary   = JSON.parse(boundaryText);
 
-        // Try loading explicit bounds, fall back to GeoJSON bbox
         try {
             const boundsResp = await fetch('data/bounds.json');
             if (boundsResp.ok) {
-                const b = await boundsResp.json();
+                const b      = await boundsResp.json();
                 IMAGE_BOUNDS = [[b.south, b.west], [b.north, b.east]];
             } else {
                 throw new Error('no bounds.json');
@@ -153,28 +183,23 @@
     let map, map2, boundaryLayer, boundaryLayer2;
 
     function initMaps() {
-        const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        const tileUrl  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
         const tileAttr = '&copy; OpenStreetMap &copy; CARTO';
 
-        map = L.map('map', {
-          zoomControl: true,
-          minZoom: 11,
-          maxZoom: 13
-        }).setView(CENTER, ZOOM);
-
+        map = L.map('map', { zoomControl: true, minZoom: 11, maxZoom: 13 })
+               .setView(CENTER, ZOOM);
         L.tileLayer(tileUrl, { attribution: tileAttr, maxZoom: 18 }).addTo(map);
 
-        // Boundary
         boundaryLayer = L.geoJSON(state.boundary, {
             style: { color: '#fbbf24', weight: 2, fillOpacity: 0.05, dashArray: '6 4' }
         }).addTo(map);
 
-        // Image overlays for all years/indices
-        years().forEach(y => {
+        FRAMES.forEach(({ year, month }) => {
             ['ndvi', 'ndwi'].forEach(idx => {
-                const overlay = L.imageOverlay(imgPath(idx, y), IMAGE_BOUNDS, { opacity: 0, interactive: false });
+                const overlay = L.imageOverlay(imgPath(idx, year, month), IMAGE_BOUNDS,
+                                               { opacity: 0, interactive: false });
                 overlay.addTo(map);
-                state.overlays[idx][y] = overlay;
+                state.overlays[idx][frameKey(year, month)] = overlay;
             });
         });
 
@@ -186,62 +211,65 @@
         }).setView([39.5, -0.5], 8);
         L.tileLayer(tileUrl, { maxZoom: 10 }).addTo(minimap);
         L.marker(CENTER, {
-            icon: L.divIcon({ className: 'minimap-marker', html: '<div style="width:10px;height:10px;background:#fbbf24;border-radius:50%;border:2px solid #fff;"></div>' })
+            icon: L.divIcon({
+                className: 'minimap-marker',
+                html: '<div style="width:10px;height:10px;background:#fbbf24;border-radius:50%;border:2px solid #fff;"></div>'
+            })
         }).addTo(minimap);
 
-        // Map click → show pixel info (placeholder)
-        map.on('click', function (e) {
+        map.on('click', (e) => {
             L.popup()
-                .setLatLng(e.latlng)
-                .setContent(`<b>${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}</b><br>Index: ${state.index.toUpperCase()}<br>Year: ${state.year}`)
-                .openOn(map);
+             .setLatLng(e.latlng)
+             .setContent(
+                 `<b>${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}</b><br>` +
+                 `Index: ${state.index.toUpperCase()}<br>` +
+                 `${frameLabel(state.year, state.month)}`
+             )
+             .openOn(map);
         });
     }
 
     function initCompareMap() {
         if (map2) return;
         const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-        map2 = L.map('map', {
-          zoomControl: true,
-          minZoom: 11,
-          maxZoom: 13
-        }).setView(CENTER, ZOOM);
+        map2 = L.map('map2', { zoomControl: true, minZoom: 11, maxZoom: 13 })
+                .setView(CENTER, ZOOM);
         L.tileLayer(tileUrl, { maxZoom: 18 }).addTo(map2);
         boundaryLayer2 = L.geoJSON(state.boundary, {
             style: { color: '#fbbf24', weight: 2, fillOpacity: 0.05, dashArray: '6 4' }
         }).addTo(map2);
 
-        years().forEach(y => {
+        FRAMES.forEach(({ year, month }) => {
             ['ndvi', 'ndwi'].forEach(idx => {
-                const overlay = L.imageOverlay(imgPath(idx, y), IMAGE_BOUNDS, { opacity: 0 });
+                const overlay = L.imageOverlay(imgPath(idx, year, month), IMAGE_BOUNDS, { opacity: 0 });
                 overlay.addTo(map2);
-                state.overlays2[idx][y] = overlay;
+                state.overlays2[idx][frameKey(year, month)] = overlay;
             });
         });
 
-        // Sync maps
         map.on('move', () => map2.setView(map.getCenter(), map.getZoom(), { animate: false }));
         map.on('zoom', () => map2.setView(map.getCenter(), map.getZoom(), { animate: false }));
     }
 
-    // ── Show / hide overlay for a given year ───────────────────
-    function showYear(year, idx) {
-        // Hide all overlays
-        years().forEach(y => {
+    // ── Show overlay ───────────────────────────────────────────
+    function showFrame(fi, idx) {
+        FRAMES.forEach(({ year, month }) => {
             ['ndvi', 'ndwi'].forEach(i => {
-                state.overlays[i][y].setOpacity(0);
+                state.overlays[i][frameKey(year, month)].setOpacity(0);
             });
         });
-        state.overlays[idx][year].setOpacity(0.85);
+        const { year, month } = FRAMES[fi];
+        state.overlays[idx][frameKey(year, month)].setOpacity(0.85);
     }
 
-    function showCompareYear(year, idx) {
-        years().forEach(y => {
+    function showCompareFrame(fi, idx) {
+        FRAMES.forEach(({ year, month }) => {
             ['ndvi', 'ndwi'].forEach(i => {
-                state.overlays2[i][y].setOpacity(0);
+                state.overlays2[i][frameKey(year, month)].setOpacity(0);
             });
         });
-        state.overlays2[idx][year].setOpacity(0.85);
+        const { year, month } = FRAMES[fi];
+        state.overlays2[idx][frameKey(year, month)].setOpacity(0.85);
     }
 
     // ── Chart ──────────────────────────────────────────────────
@@ -250,7 +278,7 @@
         state.chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [],
+                labels:   [],
                 datasets: [
                     {
                         label: 'Mean',
@@ -259,22 +287,22 @@
                         backgroundColor: 'rgba(59,158,255,0.1)',
                         fill: true,
                         tension: 0.3,
-                        pointRadius: 2,
+                        pointRadius: 1.5,
                         pointHoverRadius: 5,
                     },
                     {
-                        label: 'Trend',
+                        label: 'Annual trend',
                         data: [],
-                        borderColor: 'rgba(251,191,36,0.6)',
+                        borderColor: 'rgba(251,191,36,0.5)',
                         borderDash: [6, 4],
                         pointRadius: 0,
                         tension: 0,
                         fill: false,
                     },
                     {
-                        label: 'Current Year',
+                        label: 'Current frame',
                         data: [],
-                        pointRadius: 8,
+                        pointRadius: 7,
                         pointBackgroundColor: '#f87171',
                         pointBorderColor: '#fff',
                         pointBorderWidth: 2,
@@ -285,63 +313,93 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 150 },
+                animation: { duration: 100 },
                 plugins: {
-                    legend: { display: true, labels: { color: '#8899aa', boxWidth: 12, font: { size: 11 } } },
-                    tooltip: { mode: 'index', intersect: false },
+                    legend: {
+                        display: true,
+                        labels: { color: '#8899aa', boxWidth: 12, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: (items) => items[0]?.label || '',
+                        }
+                    },
                 },
                 scales: {
-                    x: { ticks: { color: '#8899aa', maxTicksLimit: 10 }, grid: { color: 'rgba(38,58,78,0.5)' } },
-                    y: { ticks: { color: '#8899aa' }, grid: { color: 'rgba(38,58,78,0.5)' } }
+                    x: {
+                        ticks: {
+                            color: '#8899aa',
+                            maxTicksLimit: 14,
+                            // Show only year ticks (first month of each year group)
+                            callback: function(val, idx) {
+                                const lbl = this.getLabelForValue(val);
+                                return lbl && lbl.startsWith('Feb') ? lbl.slice(4) : null;
+                            }
+                        },
+                        grid: { color: 'rgba(38,58,78,0.5)' }
+                    },
+                    y: {
+                        ticks: { color: '#8899aa' },
+                        grid:  { color: 'rgba(38,58,78,0.5)' }
+                    }
                 }
             }
         });
     }
 
-    function linearTrend(ys, vs) {
-        const n = vs.length;
-        const sx = ys.reduce((a, b) => a + b, 0);
-        const sy = vs.reduce((a, b) => a + b, 0);
-        const sxy = ys.reduce((a, x, i) => a + x * vs[i], 0);
-        const sxx = ys.reduce((a, x) => a + x * x, 0);
-        const m = (n * sxy - sx * sy) / (n * sxx - sx * sx);
-        const b = (sy - m * sx) / n;
-        return ys.map(x => m * x + b);
+    function linearTrend(xs, ys) {
+        const n = xs.length;
+        if (n < 2) return ys.map(() => ys[0]);
+        const sx  = xs.reduce((a, b) => a + b, 0);
+        const sy  = ys.reduce((a, b) => a + b, 0);
+        const sxy = xs.reduce((a, x, i) => a + x * ys[i], 0);
+        const sxx = xs.reduce((a, x) => a + x * x, 0);
+        const m   = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+        const b   = (sy - m * sx) / n;
+        return xs.map(x => m * x + b);
     }
 
     function updateChart() {
-        const data = state.stats[state.index];
-        const yrs = data.map(d => d.year);
-        const means = data.map(d => d.mean);
-        const trend = linearTrend(yrs, means);
-        const highlight = new Array(yrs.length).fill(null);
-        const ci = yrs.indexOf(state.year);
+        const data   = state.stats[state.index];
+        // Build labels in chronological order: "Feb 1984", "May 1984", "Aug 1984", ...
+        const labels = data.map(d => `${MONTH_LABELS[+d.month]} ${d.year}`);
+        const means  = data.map(d => d.mean);
+        // Trend line over frame index
+        const xs     = data.map((_, i) => i);
+        const trend  = linearTrend(xs, means);
+
+        const highlight = new Array(data.length).fill(null);
+        const ci = data.findIndex(d => d.year === state.year && +d.month === state.month);
         if (ci >= 0) highlight[ci] = means[ci];
 
         const ds = state.chart.data.datasets;
-        state.chart.data.labels = yrs;
-        ds[0].data = means;
+        state.chart.data.labels = labels;
+        ds[0].data  = means;
         ds[0].label = state.index === 'ndvi' ? 'Mean NDVI' : 'Mean NDWI';
-        ds[0].borderColor = state.index === 'ndvi' ? '#34d399' : '#38bdf8';
-        ds[0].backgroundColor = state.index === 'ndvi' ? 'rgba(52,211,153,0.1)' : 'rgba(56,189,248,0.1)';
-        ds[1].data = trend;
-        ds[2].data = highlight;
+        ds[0].borderColor     = state.index === 'ndvi' ? '#34d399' : '#38bdf8';
+        ds[0].backgroundColor = state.index === 'ndvi'
+            ? 'rgba(52,211,153,0.1)' : 'rgba(56,189,248,0.1)';
+        ds[1].data  = trend;
+        ds[2].data  = highlight;
         state.chart.update();
     }
 
     // ── Stats cards ────────────────────────────────────────────
     function updateStats() {
         const data = state.stats[state.index];
-        const row = data.find(d => d.year === state.year);
+        const row  = data.find(d => d.year === state.year && +d.month === state.month);
         if (!row) return;
-        $('#stat-mean').textContent = row.mean.toFixed(3);
+        $('#stat-mean').textContent   = row.mean.toFixed(3);
         $('#stat-median').textContent = row.median.toFixed(3);
-        $('#stat-range').textContent = `${row.min.toFixed(3)} / ${row.max.toFixed(3)}`;
-        $('#stat-std').textContent = row.std.toFixed(3);
+        $('#stat-range').textContent  = `${row.min.toFixed(3)} / ${row.max.toFixed(3)}`;
+        $('#stat-std').textContent    = row.std.toFixed(3);
 
-        // Extra stats for NDWI
         if (state.index === 'ndwi' && row.water_area_ha !== undefined) {
-            els.extraStats.innerHTML = `Water area: <strong>${row.water_area_ha.toFixed(0)} ha</strong> · Wetland coverage: <strong>${row.wetland_coverage_pct.toFixed(1)}%</strong>`;
+            els.extraStats.innerHTML =
+                `Water area: <strong>${(+row.water_area_ha).toFixed(0)} ha</strong>` +
+                ` · Wetland coverage: <strong>${(+row.wetland_coverage_pct).toFixed(1)}%</strong>`;
         } else {
             els.extraStats.innerHTML = '';
         }
@@ -365,27 +423,46 @@
     // ── URL hash ───────────────────────────────────────────────
     function readHash() {
         const params = new URLSearchParams(window.location.hash.slice(1));
-        if (params.has('year')) state.year = Math.max(START_YEAR, Math.min(END_YEAR, +params.get('year')));
-        if (params.has('index') && ['ndvi', 'ndwi'].includes(params.get('index'))) state.index = params.get('index');
+        if (params.has('year') && params.has('month')) {
+            const y = +params.get('year');
+            const m = +params.get('month');
+            const fi = FRAMES.findIndex(f => f.year === y && f.month === m);
+            if (fi >= 0) state.frameIndex = fi;
+        } else if (params.has('year')) {
+            const y  = +params.get('year');
+            const fi = FRAMES.findIndex(f => f.year === y);
+            if (fi >= 0) state.frameIndex = fi;
+        }
+        if (params.has('index') && ['ndvi', 'ndwi'].includes(params.get('index'))) {
+            state.index = params.get('index');
+        }
     }
 
     function writeHash() {
-        history.replaceState(null, '', `#year=${state.year}&index=${state.index}`);
+        history.replaceState(null, '',
+            `#year=${state.year}&month=${state.month}&index=${state.index}`);
     }
 
     // ── Master update ──────────────────────────────────────────
     function update() {
-        els.yearLabel.textContent = state.year;
-        els.slider.value = state.year;
-        showYear(state.year, state.index);
-        if (state.compareMode) showCompareYear(state.compareYear, state.index);
+        const lbl = frameLabel(state.year, state.month);
+        els.frameLabel.textContent = lbl;
+        if (els.monthDesc) {
+            els.monthDesc.textContent = MONTH_DESC[state.month] || '';
+        }
+        els.slider.value = state.frameIndex;
+        showFrame(state.frameIndex, state.index);
+        if (state.compareMode) showCompareFrame(state.compareFrameIndex, state.index);
         updateChart();
         updateStats();
         updateLegend();
         writeHash();
 
         // Highlight active jump btn
-        $$('.jump-btn').forEach(b => b.classList.toggle('active', +b.dataset.year === state.year));
+        $$('.jump-btn').forEach(b => {
+            const fi = +b.dataset.frame;
+            b.classList.toggle('active', fi === state.frameIndex);
+        });
     }
 
     // ── Animation ──────────────────────────────────────────────
@@ -393,7 +470,7 @@
         state.playing = true;
         els.playBtn.textContent = '⏸';
         state.animTimer = setInterval(() => {
-            state.year = state.year >= END_YEAR ? START_YEAR : state.year + 1;
+            state.frameIndex = state.frameIndex >= TOTAL_FRAMES - 1 ? 0 : state.frameIndex + 1;
             update();
         }, state.speed);
     }
@@ -406,8 +483,13 @@
 
     // ── Event wiring ───────────────────────────────────────────
     function bindEvents() {
-        els.slider.addEventListener('input', () => { state.year = +els.slider.value; update(); });
+        els.slider.addEventListener('input', () => {
+            state.frameIndex = +els.slider.value;
+            update();
+        });
+
         els.playBtn.addEventListener('click', () => state.playing ? pause() : play());
+
         els.speedSlider.addEventListener('input', () => {
             state.speed = +els.speedSlider.value;
             if (state.playing) { pause(); play(); }
@@ -417,7 +499,7 @@
         els.btnNdwi.addEventListener('click', () => { state.index = 'ndwi'; setActiveToggle(); update(); });
 
         $$('.jump-btn').forEach(b => b.addEventListener('click', () => {
-            state.year = +b.dataset.year;
+            state.frameIndex = +b.dataset.frame;
             update();
         }));
 
@@ -436,15 +518,22 @@
         });
 
         els.compareSlider.addEventListener('input', () => {
-            state.compareYear = +els.compareSlider.value;
-            els.compareYearLabel.textContent = state.compareYear;
-            showCompareYear(state.compareYear, state.index);
+            state.compareFrameIndex = +els.compareSlider.value;
+            const { year, month } = FRAMES[state.compareFrameIndex];
+            els.compareYearLabel.textContent = frameLabel(year, month);
+            showCompareFrame(state.compareFrameIndex, state.index);
         });
 
         // Keyboard
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { state.year = Math.min(END_YEAR, state.year + 1); update(); }
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { state.year = Math.max(START_YEAR, state.year - 1); update(); }
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                state.frameIndex = Math.min(TOTAL_FRAMES - 1, state.frameIndex + 1);
+                update();
+            }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                state.frameIndex = Math.max(0, state.frameIndex - 1);
+                update();
+            }
             if (e.key === ' ') { e.preventDefault(); state.playing ? pause() : play(); }
         });
     }
@@ -470,11 +559,8 @@
         bindEvents();
         update();
 
-        // Hide loading overlay
         els.overlay.classList.add('hidden');
         setTimeout(() => els.overlay.remove(), 600);
-
-        // Fix map size after layout settles
         setTimeout(() => map.invalidateSize(), 200);
     }
 
