@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marjal dels Moros — 40 Years of Environmental Change</title>
+    <title>Marjal dels Moros — Seasonal Environmental Change 1984–2024</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -15,14 +15,14 @@
             <h2>Loading Satellite Imagery</h2>
             <p id="loading-status">Initializing...</p>
             <div class="progress-bar"><div id="progress-fill"></div></div>
-            <p id="loading-count">0 / 82 images</p>
+            <p id="loading-count">0 / 246 images</p>
         </div>
     </div>
 
     <header>
         <div class="header-left">
             <h1>Marjal dels Moros</h1>
-            <p class="subtitle">40 Years of Environmental Change (1984–2024)</p>
+            <p class="subtitle">Seasonal Change 1984–2024 · Feb / May / Aug</p>
         </div>
         <div class="header-right">
             <span class="badge">BC3 Climate Research</span>
@@ -43,12 +43,15 @@
 
             <div class="quick-jump">
                 <span class="label">Jump to:</span>
-                <button class="jump-btn" data-year="1984">1984</button>
-                <button class="jump-btn" data-year="1990">1990</button>
-                <button class="jump-btn" data-year="2000">2000</button>
-                <button class="jump-btn" data-year="2010">2010</button>
-                <button class="jump-btn" data-year="2020">2020</button>
-                <button class="jump-btn" data-year="2024">2024</button>
+                <!-- data-frame = frame index (3 months × year offset from 1984) -->
+                <!-- Feb 1984 = frame 0, May 1984 = 1, Aug 1984 = 2 -->
+                <!-- Feb 1990 = 18, Feb 2000 = 48, Feb 2010 = 78, Feb 2024 = 120 -->
+                <button class="jump-btn" data-frame="0">Feb '84</button>
+                <button class="jump-btn" data-frame="18">Feb '90</button>
+                <button class="jump-btn" data-frame="48">Feb '00</button>
+                <button class="jump-btn" data-frame="78">Feb '10</button>
+                <button class="jump-btn" data-frame="108">Feb '20</button>
+                <button class="jump-btn" data-frame="122">Aug '24</button>
             </div>
 
             <div class="compare-toggle">
@@ -58,14 +61,16 @@
             </div>
         </div>
 
-        <!-- Year display & slider -->
+        <!-- Frame display & slider (3 seasonal snapshots per year) -->
         <div class="slider-section">
             <div class="year-display">
-                <span id="current-year">1984</span>
+                <span id="current-year">Feb 1984</span>
+                <span id="month-desc" class="month-desc">Peak water / winter flooding</span>
             </div>
             <div class="slider-row">
                 <button id="btn-play" class="play-btn" title="Play/Pause">▶</button>
-                <input type="range" id="year-slider" min="1984" max="2024" value="1984" step="1" />
+                <!-- 123 frames total: 0–122 (3 months × 41 years) -->
+                <input type="range" id="year-slider" min="0" max="122" value="0" step="1" />
                 <div class="speed-control">
                     <label for="speed-slider">Speed</label>
                     <input type="range" id="speed-slider" min="100" max="2000" value="500" step="100" />
@@ -84,8 +89,8 @@
             <!-- Compare map (hidden by default) -->
             <div class="panel map-panel hidden" id="map-panel-2">
                 <div class="compare-controls">
-                    <span id="compare-year-label">2024</span>
-                    <input type="range" id="compare-slider" min="1984" max="2024" value="2024" step="1" />
+                    <span id="compare-year-label">Aug 2024</span>
+                    <input type="range" id="compare-slider" min="0" max="122" value="122" step="1" />
                 </div>
                 <div id="map2" class="map-container"></div>
             </div>

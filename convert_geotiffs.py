@@ -4,9 +4,18 @@
 Usage:
     python convert_geotiffs.py --input-dir /path/to/tifs --output-dir data/images
 
-Expects files named:
-    Marjal_NDVI_RGB_YYYY.tif
-    Marjal_NDWI_RGB_YYYY.tif
+Expects files named with year and two-digit month (seasonal snapshots):
+    Marjal_NDVI_RGB_YYYY_MM.tif
+    Marjal_NDWI_RGB_YYYY_MM.tif
+
+The three target months capture seasonal peaks and troughs for this
+Mediterranean wetland (Marjal dels Moros, Valencia):
+    02  February – peak flooding / maximum water extent
+    05  May      – peak vegetation (spring green-up)
+    08  August   – summer drought minimum (both indices at trough)
+
+Legacy annual files (Marjal_NDVI_RGB_YYYY.tif) are still accepted and
+converted to YYYY_XX.png where XX is the unknown-month placeholder.
 """
 
 import argparse
@@ -23,20 +32,18 @@ except ImportError:
 
 from PIL import Image
 
+# Canonical seasonal months for this site
+SEASONAL_MONTHS = [2, 5, 8]
+
 
 def convert_tif_to_png(tif_path, png_path, target_size=512):
     """Read a 3-band GeoTIFF and save as PNG."""
     with rasterio.open(tif_path) as src:
-        # Read RGB bands (1, 2, 3)
         bands = src.read([1, 2, 3])  # shape: (3, H, W)
 
-    # Stack to (H, W, 3)
     rgb = np.moveaxis(bands, 0, -1)
-
-    # Handle nodata / NaN → black
     rgb = np.nan_to_num(rgb, nan=0.0)
 
-    # Normalize to 0-255 if float
     if rgb.dtype in (np.float32, np.float64):
         vmin, vmax = np.percentile(rgb[rgb > 0], [2, 98]) if (rgb > 0).any() else (0, 1)
         rgb = np.clip((rgb - vmin) / (vmax - vmin + 1e-10) * 255, 0, 255)
@@ -58,25 +65,45 @@ def main():
     parser.add_argument("--size", type=int, default=512, help="Output image size (px)")
     args = parser.parse_args()
 
-    pattern = re.compile(r"Marjal_(NDVI|NDWI)_RGB_(\d{4})\.tif$", re.IGNORECASE)
+    # Primary pattern: seasonal files with explicit month
+    pattern_monthly = re.compile(
+        r"Marjal_(NDVI|NDWI)_RGB_(\d{4})_(\d{2})\.tif$", re.IGNORECASE
+    )
+    # Legacy pattern: annual files without month
+    pattern_annual = re.compile(
+        r"Marjal_(NDVI|NDWI)_RGB_(\d{4})\.tif$", re.IGNORECASE
+    )
+
     found = 0
 
     for fname in sorted(os.listdir(args.input_dir)):
-        m = pattern.match(fname)
-        if not m:
+        m = pattern_monthly.match(fname)
+        if m:
+            idx = m.group(1).lower()
+            year = m.group(2)
+            month = m.group(3)
+            tif_path = os.path.join(args.input_dir, fname)
+            png_path = os.path.join(args.output_dir, idx, f"{year}_{month}.png")
+            convert_tif_to_png(tif_path, png_path, args.size)
+            found += 1
             continue
-        idx = m.group(1).lower()
-        year = m.group(2)
-        tif_path = os.path.join(args.input_dir, fname)
-        png_path = os.path.join(args.output_dir, idx, f"{year}.png")
-        convert_tif_to_png(tif_path, png_path, args.size)
-        found += 1
+
+        m = pattern_annual.match(fname)
+        if m:
+            idx = m.group(1).lower()
+            year = m.group(2)
+            tif_path = os.path.join(args.input_dir, fname)
+            # Treat legacy annual file as unknown month (XX)
+            png_path = os.path.join(args.output_dir, idx, f"{year}_XX.png")
+            convert_tif_to_png(tif_path, png_path, args.size)
+            found += 1
 
     if found == 0:
         print(f"No matching GeoTIFF files found in {args.input_dir}")
-        print("Expected pattern: Marjal_NDVI_RGB_YYYY.tif / Marjal_NDWI_RGB_YYYY.tif")
+        print("Expected pattern: Marjal_NDVI_RGB_YYYY_MM.tif  (e.g. _02, _05, _08)")
     else:
         print(f"\nConverted {found} files.")
+        print(f"Seasonal months targeted: {[f'{m:02d}' for m in SEASONAL_MONTHS]}")
 
 
 if __name__ == "__main__":
