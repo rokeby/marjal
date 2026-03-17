@@ -65,13 +65,20 @@ def main():
     parser.add_argument("--size", type=int, default=512, help="Output image size (px)")
     args = parser.parse_args()
 
+    # Map GEE export layer names to output folder names
+    layer_folder = {
+        'NDVI': 'ndvi',
+        'NDWI': 'ndwi',
+        'SAT':  'true_color',
+    }
+
     # Primary pattern: seasonal files with explicit month
     pattern_monthly = re.compile(
-        r"Marjal_(NDVI|NDWI)_RGB_(\d{4})_(\d{2})\.tif$", re.IGNORECASE
+        r"Marjal_(NDVI|NDWI|SAT)_RGB_(\d{4})_(\d{2})\.tif$", re.IGNORECASE
     )
     # Legacy pattern: annual files without month
     pattern_annual = re.compile(
-        r"Marjal_(NDVI|NDWI)_RGB_(\d{4})\.tif$", re.IGNORECASE
+        r"Marjal_(NDVI|NDWI|SAT)_RGB_(\d{4})\.tif$", re.IGNORECASE
     )
 
     found = 0
@@ -79,22 +86,24 @@ def main():
     for fname in sorted(os.listdir(args.input_dir)):
         m = pattern_monthly.match(fname)
         if m:
-            idx = m.group(1).lower()
+            idx = m.group(1).upper()
+            folder = layer_folder.get(idx, idx.lower())
             year = m.group(2)
             month = m.group(3)
             tif_path = os.path.join(args.input_dir, fname)
-            png_path = os.path.join(args.output_dir, idx, f"{year}_{month}.png")
+            png_path = os.path.join(args.output_dir, folder, f"{year}_{month}.png")
             convert_tif_to_png(tif_path, png_path, args.size)
             found += 1
             continue
 
         m = pattern_annual.match(fname)
         if m:
-            idx = m.group(1).lower()
+            idx = m.group(1).upper()
+            folder = layer_folder.get(idx, idx.lower())
             year = m.group(2)
             tif_path = os.path.join(args.input_dir, fname)
             # Treat legacy annual file as unknown month (XX)
-            png_path = os.path.join(args.output_dir, idx, f"{year}_XX.png")
+            png_path = os.path.join(args.output_dir, folder, f"{year}_XX.png")
             convert_tif_to_png(tif_path, png_path, args.size)
             found += 1
 
