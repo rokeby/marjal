@@ -15,7 +15,7 @@
             <h2>Loading Satellite Imagery</h2>
             <p id="loading-status">Initializing...</p>
             <div class="progress-bar"><div id="progress-fill"></div></div>
-            <p id="loading-count">0 / 246 images</p>
+            <p id="loading-count">0 / 369 images</p>
         </div>
     </div>
 
@@ -34,24 +34,22 @@
         <div class="controls-bar">
             <div class="index-toggle">
                 <button id="btn-ndvi" class="toggle-btn active" data-index="ndvi">
-                    <span class="dot ndvi-dot"></span> NDVI (Vegetation)
+                    <span class="dot ndvi-dot"></span> NDVI
                 </button>
                 <button id="btn-ndwi" class="toggle-btn" data-index="ndwi">
-                    <span class="dot ndwi-dot"></span> NDWI (Water)
+                    <span class="dot ndwi-dot"></span> NDWI
+                </button>
+                <button id="btn-true_color" class="toggle-btn" data-index="true_color">
+                    <span class="dot sat-dot"></span> Satellite
                 </button>
             </div>
 
-            <div class="quick-jump">
-                <span class="label">Jump to:</span>
-                <!-- data-frame = frame index (3 months × year offset from 1984) -->
-                <!-- Feb 1984 = frame 0, May 1984 = 1, Aug 1984 = 2 -->
-                <!-- Feb 1990 = 18, Feb 2000 = 48, Feb 2010 = 78, Feb 2024 = 120 -->
-                <button class="jump-btn" data-frame="0">Feb '84</button>
-                <button class="jump-btn" data-frame="18">Feb '90</button>
-                <button class="jump-btn" data-frame="48">Feb '00</button>
-                <button class="jump-btn" data-frame="78">Feb '10</button>
-                <button class="jump-btn" data-frame="108">Feb '20</button>
-                <button class="jump-btn" data-frame="122">Aug '24</button>
+            <div class="season-filter">
+                <span class="label">Season:</span>
+                <button class="season-btn active" data-season="all">All</button>
+                <button class="season-btn" data-season="2">Feb</button>
+                <button class="season-btn" data-season="5">May</button>
+                <button class="season-btn" data-season="8">Aug</button>
             </div>
 
             <div class="compare-toggle">
@@ -61,7 +59,7 @@
             </div>
         </div>
 
-        <!-- Frame display & slider (3 seasonal snapshots per year) -->
+        <!-- Frame display & slider -->
         <div class="slider-section">
             <div class="year-display">
                 <span id="current-year">Feb 1984</span>
@@ -69,7 +67,6 @@
             </div>
             <div class="slider-row">
                 <button id="btn-play" class="play-btn" title="Play/Pause">▶</button>
-                <!-- 123 frames total: 0–122 (3 months × 41 years) -->
                 <input type="range" id="year-slider" min="0" max="122" value="0" step="1" />
                 <div class="speed-control">
                     <label for="speed-slider">Speed</label>

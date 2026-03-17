@@ -95,15 +95,17 @@ header h1 { font-size: 1.25rem; font-weight: 700; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .ndvi-dot { background: var(--green); }
 .ndwi-dot { background: var(--blue); }
-.quick-jump { display: flex; align-items: center; gap: 0.3rem; margin-left: auto; }
-.quick-jump .label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.2rem; }
-.jump-btn {
+.sat-dot  { background: #e0a040; }
+.season-filter { display: flex; align-items: center; gap: 0.3rem; margin-left: auto; }
+.season-filter .label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.2rem; }
+.season-btn {
     padding: 0.25rem 0.55rem; font-size: 0.75rem;
     background: var(--surface2); color: var(--text-dim);
     border: 1px solid var(--border); border-radius: var(--radius);
     cursor: pointer; transition: all 0.15s;
 }
-.jump-btn:hover { border-color: var(--accent); color: var(--text); }
+.season-btn:hover { border-color: var(--accent); color: var(--text); }
+.season-btn.active { background: var(--yellow); color: #000; border-color: var(--yellow); font-weight: 600; }
 .compare-toggle { margin-left: 0.5rem; }
 
 /* ===== Slider Section ===== */

@@ -23,12 +23,12 @@
         5: 'Peak vegetation (spring)',
         8: 'Summer drought minimum',
     };
+    const ALL_LAYERS     = ['ndvi', 'ndwi', 'true_color'];
     const CENTER         = [39.64, -0.34];
     const ZOOM           = 13;
     let   IMAGE_BOUNDS   = null;
 
     // ── Build ordered frame list ───────────────────────────────
-    // frames() returns [{year, month}, ...] sorted chronologically.
     function frames() {
         const list = [];
         for (let y = START_YEAR; y <= END_YEAR; y++) {
@@ -53,26 +53,47 @@
         return `${MONTH_LABELS[month]} ${year}`;
     }
 
+    // ── Filtered frames (season filter) ──────────────────────
+    // Returns array of indices into FRAMES matching the filter.
+    // seasonFilter: 'all' | 2 | 5 | 8
+    function filteredFrameIndices(seasonFilter) {
+        if (seasonFilter === 'all') {
+            return FRAMES.map((_, i) => i);
+        }
+        const m = +seasonFilter;
+        return FRAMES.reduce((acc, f, i) => {
+            if (f.month === m) acc.push(i);
+            return acc;
+        }, []);
+    }
+
     // ── State ──────────────────────────────────────────────────
     const state = {
-        frameIndex: 0,           // index into FRAMES
+        frameIndex: 0,           // index into FRAMES (absolute)
         get year()  { return FRAMES[this.frameIndex].year;  },
         get month() { return FRAMES[this.frameIndex].month; },
-        index: 'ndvi',           // 'ndvi' | 'ndwi'
+        index: 'ndvi',           // 'ndvi' | 'ndwi' | 'true_color'
+        seasonFilter: 'all',     // 'all' | 2 | 5 | 8
+        filteredIndices: [],     // computed from seasonFilter
         playing: false,
         speed: 500,
         compareMode: false,
         compareFrameIndex: TOTAL_FRAMES - 1,
         get compareYear()  { return FRAMES[this.compareFrameIndex].year;  },
         get compareMonth() { return FRAMES[this.compareFrameIndex].month; },
-        images: { ndvi: {}, ndwi: {} },
-        overlays:  { ndvi: {}, ndwi: {} },
-        overlays2: { ndvi: {}, ndwi: {} },
+        images:    { ndvi: {}, ndwi: {}, true_color: {} },
+        overlays:  { ndvi: {}, ndwi: {}, true_color: {} },
+        overlays2: { ndvi: {}, ndwi: {}, true_color: {} },
         stats: { ndvi: [], ndwi: [] },
         boundary: null,
         chart: null,
         animTimer: null,
     };
+
+    // Recompute filtered indices whenever filter changes
+    function updateFilteredIndices() {
+        state.filteredIndices = filteredFrameIndices(state.seasonFilter);
+    }
 
     // ── DOM refs ───────────────────────────────────────────────
     const $ = (s) => document.querySelector(s);
@@ -91,6 +112,7 @@
         els.speedSlider      = $('#speed-slider');
         els.btnNdvi          = $('#btn-ndvi');
         els.btnNdwi          = $('#btn-ndwi');
+        els.btnSat           = $('#btn-true_color');
         els.btnCompare       = $('#btn-compare');
         els.comparePanel     = $('#map-panel-2');
         els.compareSlider    = $('#compare-slider');
@@ -98,6 +120,8 @@
         els.contentGrid      = $('#content-grid');
         els.legend           = $('#legend');
         els.extraStats       = $('#extra-stats');
+        els.statsCards       = $('#stats-cards');
+        els.chartContainer   = $('.chart-container');
     }
 
     // ── CSV parser ─────────────────────────────────────────────
@@ -118,7 +142,7 @@
     // ── Preload all seasonal images ────────────────────────────
     function preloadImages() {
         return new Promise((resolve) => {
-            const total = TOTAL_FRAMES * 2;
+            const total = TOTAL_FRAMES * ALL_LAYERS.length;
             let loaded  = 0;
             function tick() {
                 loaded++;
@@ -127,7 +151,7 @@
                 if (loaded === total) resolve();
             }
             FRAMES.forEach(({ year, month }) => {
-                ['ndvi', 'ndwi'].forEach(idx => {
+                ALL_LAYERS.forEach(idx => {
                     const img = new Image();
                     img.onload  = tick;
                     img.onerror = tick;
@@ -195,7 +219,7 @@
         }).addTo(map);
 
         FRAMES.forEach(({ year, month }) => {
-            ['ndvi', 'ndwi'].forEach(idx => {
+            ALL_LAYERS.forEach(idx => {
                 const overlay = L.imageOverlay(imgPath(idx, year, month), IMAGE_BOUNDS,
                                                { opacity: 0, interactive: false });
                 overlay.addTo(map);
@@ -222,7 +246,7 @@
              .setLatLng(e.latlng)
              .setContent(
                  `<b>${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}</b><br>` +
-                 `Index: ${state.index.toUpperCase()}<br>` +
+                 `Layer: ${state.index === 'true_color' ? 'Satellite' : state.index.toUpperCase()}<br>` +
                  `${frameLabel(state.year, state.month)}`
              )
              .openOn(map);
@@ -240,7 +264,7 @@
         }).addTo(map2);
 
         FRAMES.forEach(({ year, month }) => {
-            ['ndvi', 'ndwi'].forEach(idx => {
+            ALL_LAYERS.forEach(idx => {
                 const overlay = L.imageOverlay(imgPath(idx, year, month), IMAGE_BOUNDS, { opacity: 0 });
                 overlay.addTo(map2);
                 state.overlays2[idx][frameKey(year, month)] = overlay;
@@ -254,7 +278,7 @@
     // ── Show overlay ───────────────────────────────────────────
     function showFrame(fi, idx) {
         FRAMES.forEach(({ year, month }) => {
-            ['ndvi', 'ndwi'].forEach(i => {
+            ALL_LAYERS.forEach(i => {
                 state.overlays[i][frameKey(year, month)].setOpacity(0);
             });
         });
@@ -264,7 +288,7 @@
 
     function showCompareFrame(fi, idx) {
         FRAMES.forEach(({ year, month }) => {
-            ['ndvi', 'ndwi'].forEach(i => {
+            ALL_LAYERS.forEach(i => {
                 state.overlays2[i][frameKey(year, month)].setOpacity(0);
             });
         });
@@ -332,10 +356,15 @@
                         ticks: {
                             color: '#8899aa',
                             maxTicksLimit: 14,
-                            // Show only year ticks (first month of each year group)
                             callback: function(val, idx) {
                                 const lbl = this.getLabelForValue(val);
-                                return lbl && lbl.startsWith('Feb') ? lbl.slice(4) : null;
+                                if (!lbl) return null;
+                                // If filtering a single season, every label is a year
+                                if (state.seasonFilter !== 'all') {
+                                    return lbl.replace(/^\w+\s/, '');
+                                }
+                                // Otherwise show year on first month only
+                                return lbl.startsWith('Feb') ? lbl.slice(4) : null;
                             }
                         },
                         grid: { color: 'rgba(38,58,78,0.5)' }
@@ -362,11 +391,29 @@
     }
 
     function updateChart() {
-        const data   = state.stats[state.index];
-        // Build labels in chronological order: "Feb 1984", "May 1984", "Aug 1984", ...
+        const isSat = state.index === 'true_color';
+
+        // Hide chart + stats for satellite view
+        if (els.statsCards) els.statsCards.style.display = isSat ? 'none' : '';
+        if (els.chartContainer) els.chartContainer.style.display = isSat ? 'none' : '';
+        if (els.extraStats) els.extraStats.style.display = isSat ? 'none' : '';
+
+        if (isSat) return;
+
+        const allData = state.stats[state.index];
+        if (!allData || allData.length === 0) return;
+
+        // Filter data by season
+        let data;
+        if (state.seasonFilter === 'all') {
+            data = allData;
+        } else {
+            const m = +state.seasonFilter;
+            data = allData.filter(d => +d.month === m);
+        }
+
         const labels = data.map(d => `${MONTH_LABELS[+d.month]} ${d.year}`);
         const means  = data.map(d => d.mean);
-        // Trend line over frame index
         const xs     = data.map((_, i) => i);
         const trend  = linearTrend(xs, means);
 
@@ -388,6 +435,8 @@
 
     // ── Stats cards ────────────────────────────────────────────
     function updateStats() {
+        if (state.index === 'true_color') return;
+
         const data = state.stats[state.index];
         const row  = data.find(d => d.year === state.year && +d.month === state.month);
         if (!row) return;
@@ -412,11 +461,15 @@
                 <div class="legend-title">NDVI (Vegetation)</div>
                 <div class="legend-bar" style="background:linear-gradient(to right,#8b4513,#f5deb3,#adff2f,#228b22,#006400)"></div>
                 <div class="legend-labels"><span>-1 Bare</span><span>0</span><span>1 Dense</span></div>`;
-        } else {
+        } else if (state.index === 'ndwi') {
             els.legend.innerHTML = `
                 <div class="legend-title">NDWI (Water)</div>
                 <div class="legend-bar" style="background:linear-gradient(to right,#8b4513,#f5deb3,#87ceeb,#1e90ff,#00008b)"></div>
                 <div class="legend-labels"><span>-1 Dry</span><span>0</span><span>1 Water</span></div>`;
+        } else {
+            els.legend.innerHTML = `
+                <div class="legend-title">True Colour Satellite</div>
+                <div class="legend-labels"><span style="color:var(--text-dim)">Landsat (1984–2014) · Sentinel-2 (2016–2024)</span></div>`;
         }
     }
 
@@ -433,14 +486,55 @@
             const fi = FRAMES.findIndex(f => f.year === y);
             if (fi >= 0) state.frameIndex = fi;
         }
-        if (params.has('index') && ['ndvi', 'ndwi'].includes(params.get('index'))) {
+        if (params.has('index') && ALL_LAYERS.includes(params.get('index'))) {
             state.index = params.get('index');
+        }
+        // Legacy: accept 'layers' as alias for 'index'
+        if (params.has('layers') && ALL_LAYERS.includes(params.get('layers'))) {
+            state.index = params.get('layers');
+        }
+        if (params.has('season')) {
+            const s = params.get('season');
+            if (s === 'all' || ['2','5','8'].includes(s)) {
+                state.seasonFilter = s === 'all' ? 'all' : +s;
+            }
         }
     }
 
     function writeHash() {
-        history.replaceState(null, '',
-            `#year=${state.year}&month=${state.month}&index=${state.index}`);
+        let hash = `#year=${state.year}&month=${state.month}&index=${state.index}`;
+        if (state.seasonFilter !== 'all') hash += `&season=${state.seasonFilter}`;
+        history.replaceState(null, '', hash);
+    }
+
+    // ── Slider ↔ filtered frames mapping ─────────────────────
+    // The slider position maps to the filtered frame list.
+    // Slider value = position in filteredIndices array.
+    function updateSliderRange() {
+        const fi = state.filteredIndices;
+        els.slider.min   = 0;
+        els.slider.max   = fi.length - 1;
+        // Also update compare slider
+        els.compareSlider.min = 0;
+        els.compareSlider.max = fi.length - 1;
+    }
+
+    // Convert slider position to absolute frame index
+    function sliderToFrameIndex(sliderVal) {
+        return state.filteredIndices[sliderVal] || 0;
+    }
+
+    // Find closest slider position for an absolute frame index
+    function frameIndexToSlider(fi) {
+        const pos = state.filteredIndices.indexOf(fi);
+        if (pos >= 0) return pos;
+        // Find nearest filtered frame
+        let best = 0, bestDist = Infinity;
+        state.filteredIndices.forEach((idx, i) => {
+            const d = Math.abs(idx - fi);
+            if (d < bestDist) { bestDist = d; best = i; }
+        });
+        return best;
     }
 
     // ── Master update ──────────────────────────────────────────
@@ -450,19 +544,13 @@
         if (els.monthDesc) {
             els.monthDesc.textContent = MONTH_DESC[state.month] || '';
         }
-        els.slider.value = state.frameIndex;
+        els.slider.value = frameIndexToSlider(state.frameIndex);
         showFrame(state.frameIndex, state.index);
         if (state.compareMode) showCompareFrame(state.compareFrameIndex, state.index);
         updateChart();
         updateStats();
         updateLegend();
         writeHash();
-
-        // Highlight active jump btn
-        $$('.jump-btn').forEach(b => {
-            const fi = +b.dataset.frame;
-            b.classList.toggle('active', fi === state.frameIndex);
-        });
     }
 
     // ── Animation ──────────────────────────────────────────────
@@ -470,7 +558,10 @@
         state.playing = true;
         els.playBtn.textContent = '⏸';
         state.animTimer = setInterval(() => {
-            state.frameIndex = state.frameIndex >= TOTAL_FRAMES - 1 ? 0 : state.frameIndex + 1;
+            const fi = state.filteredIndices;
+            const curPos = frameIndexToSlider(state.frameIndex);
+            const nextPos = curPos >= fi.length - 1 ? 0 : curPos + 1;
+            state.frameIndex = sliderToFrameIndex(nextPos);
             update();
         }, state.speed);
     }
@@ -484,7 +575,7 @@
     // ── Event wiring ───────────────────────────────────────────
     function bindEvents() {
         els.slider.addEventListener('input', () => {
-            state.frameIndex = +els.slider.value;
+            state.frameIndex = sliderToFrameIndex(+els.slider.value);
             update();
         });
 
@@ -495,13 +586,37 @@
             if (state.playing) { pause(); play(); }
         });
 
-        els.btnNdvi.addEventListener('click', () => { state.index = 'ndvi'; setActiveToggle(); update(); });
-        els.btnNdwi.addEventListener('click', () => { state.index = 'ndwi'; setActiveToggle(); update(); });
-
-        $$('.jump-btn').forEach(b => b.addEventListener('click', () => {
-            state.frameIndex = +b.dataset.frame;
+        // Layer toggles
+        function setLayer(idx) {
+            state.index = idx;
+            setActiveToggle();
             update();
-        }));
+        }
+        els.btnNdvi.addEventListener('click', () => setLayer('ndvi'));
+        els.btnNdwi.addEventListener('click', () => setLayer('ndwi'));
+        els.btnSat.addEventListener('click',  () => setLayer('true_color'));
+
+        // Season filter buttons
+        $$('.season-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const s = btn.dataset.season;
+                state.seasonFilter = s === 'all' ? 'all' : +s;
+                updateFilteredIndices();
+                updateSliderRange();
+
+                // Snap to nearest filtered frame
+                const sliderPos = frameIndexToSlider(state.frameIndex);
+                state.frameIndex = sliderToFrameIndex(sliderPos);
+
+                // Update active season button
+                $$('.season-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Restart animation on new filter if playing
+                if (state.playing) { pause(); play(); }
+                update();
+            });
+        });
 
         // Compare
         els.btnCompare.addEventListener('click', () => {
@@ -518,7 +633,7 @@
         });
 
         els.compareSlider.addEventListener('input', () => {
-            state.compareFrameIndex = +els.compareSlider.value;
+            state.compareFrameIndex = sliderToFrameIndex(+els.compareSlider.value);
             const { year, month } = FRAMES[state.compareFrameIndex];
             els.compareYearLabel.textContent = frameLabel(year, month);
             showCompareFrame(state.compareFrameIndex, state.index);
@@ -526,12 +641,16 @@
 
         // Keyboard
         document.addEventListener('keydown', (e) => {
+            const fi = state.filteredIndices;
+            const curPos = frameIndexToSlider(state.frameIndex);
             if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-                state.frameIndex = Math.min(TOTAL_FRAMES - 1, state.frameIndex + 1);
+                const next = Math.min(fi.length - 1, curPos + 1);
+                state.frameIndex = sliderToFrameIndex(next);
                 update();
             }
             if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-                state.frameIndex = Math.max(0, state.frameIndex - 1);
+                const prev = Math.max(0, curPos - 1);
+                state.frameIndex = sliderToFrameIndex(prev);
                 update();
             }
             if (e.key === ' ') { e.preventDefault(); state.playing ? pause() : play(); }
@@ -541,12 +660,14 @@
     function setActiveToggle() {
         els.btnNdvi.classList.toggle('active', state.index === 'ndvi');
         els.btnNdwi.classList.toggle('active', state.index === 'ndwi');
+        els.btnSat.classList.toggle('active',  state.index === 'true_color');
     }
 
     // ── Boot ───────────────────────────────────────────────────
     async function init() {
         cacheDom();
         readHash();
+        updateFilteredIndices();
 
         els.status.textContent = 'Loading data...';
         await loadData();
@@ -556,6 +677,16 @@
 
         initMaps();
         initChart();
+        updateSliderRange();
+        setActiveToggle();
+
+        // Set active season button from hash
+        $$('.season-btn').forEach(b => {
+            const s = b.dataset.season;
+            const matches = state.seasonFilter === 'all' ? s === 'all' : +s === state.seasonFilter;
+            b.classList.toggle('active', matches);
+        });
+
         bindEvents();
         update();
 
